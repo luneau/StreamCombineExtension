@@ -15,7 +15,7 @@ Then, run the following command:
 ## Carthage
 
 [Carthage](https://github.com/Carthage/Carthage) is a decentralized dependency manager that builds your dependencies and provides you with binary frameworks.
-To integrate RxBluetoothKit into your Xcode project using Carthage  specify it in your `Cartfile`:
+To integrate StreamCombineExtension into your Xcode project using Carthage  specify it in your `Cartfile`:
 ```swift
 github "luneau/StreamCombineExtension.git"
 ```
