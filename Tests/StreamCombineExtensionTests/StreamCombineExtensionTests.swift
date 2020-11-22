@@ -18,8 +18,6 @@ final class StreamCombineExtensionTests: XCTestCase {
                 switch event {
                 case .openCompleted:
                     self.writeData(queue: dataQueue)
-                //case .hasSpaceAvailable:
-                //    break
                 default:
                     break
                 }
@@ -38,15 +36,15 @@ final class StreamCombineExtensionTests: XCTestCase {
         var resultString = ""
        
         Stream.getBoundStreams(withBufferSize: capacity, inputStream: &inputStream, outputStream: &outputStream)
-        var cancellable : AnyCancellable? = nil
-        let cancellableOut : AnyCancellable? = inputStream?.openPublisher().sink(
+        var cancellableOut : AnyCancellable? = nil
+        let cancellableIn : AnyCancellable? = inputStream?.openPublisher().sink(
             receiveCompletion: {
                 print ($0) }
             , receiveValue: { [self] event,dataReceived in
                 switch event {
                 case .openCompleted:
-                    cancellable = self.openOutput(outputStream:outputStream!,dataQueue:dataQueue)
-                case .hasBytesAvailable:
+                    cancellableOut = self.openOutput(outputStream:outputStream!,dataQueue:dataQueue)
+                case .dataReceived:
                     guard let dataReceived = dataReceived else { return }
                     resultString.append(String(data: dataReceived, encoding: .utf8)!)
                     if resultString == testString {
@@ -62,8 +60,8 @@ final class StreamCombineExtensionTests: XCTestCase {
             })
         
         wait(for: [expectation], timeout: 100.0)
-        cancellable?.cancel()
         cancellableOut?.cancel()
+        cancellableIn?.cancel()
     }
     
 

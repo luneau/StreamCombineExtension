@@ -11,7 +11,7 @@ import Combine
 
 
 
-final class OutputStreamSubscription<SubscriberType: Subscriber>: NSObject, StreamDelegate, Subscription, Subscriber where SubscriberType.Input == (Stream.Event, Int), SubscriberType.Failure == Error  {
+final class OutputStreamSubscription<SubscriberType: Subscriber>: NSObject, StreamDelegate, Subscription, Subscriber where SubscriberType.Input == (StreamEvent, Int), SubscriberType.Failure == Error  {
     
     // MARK: - Subscription : write data
     
@@ -68,7 +68,7 @@ final class OutputStreamSubscription<SubscriberType: Subscriber>: NSObject, Stre
             }
            
             offset += bytesWritten
-            let _ = subscriber?.receive( (.hasSpaceAvailable, bytesWritten))
+            let _ = subscriber?.receive( (.dataSent, bytesWritten))
             return
         } else {
             subscription?.request(.max(1))
@@ -106,7 +106,7 @@ final class OutputStreamSubscription<SubscriberType: Subscriber>: NSObject, Stre
 
 struct OutputStreamPublisher : Publisher {
     
-    typealias Output =  (Stream.Event, Int)
+    typealias Output =  (StreamEvent, Int)
     typealias Failure = Error
     
     private let outputStream: OutputStream
@@ -132,7 +132,7 @@ struct OutputStreamPublisher : Publisher {
 // MARK: - open stream the publisher provide lifecycle informations
 extension OutputStream {
     func openPublisher(dataPublisher : AnyPublisher<Data,Never> , in aRunLoop: RunLoop = RunLoop.current,
-                       forMode mode: RunLoop.Mode = .default) -> AnyPublisher< (Stream.Event, Int),Error> {
+                       forMode mode: RunLoop.Mode = .default) -> AnyPublisher< (StreamEvent, Int),Error> {
         return OutputStreamPublisher(outputStream : self , dataPublisher : dataPublisher , in : aRunLoop,
                                      forMode : mode).eraseToAnyPublisher()
     }

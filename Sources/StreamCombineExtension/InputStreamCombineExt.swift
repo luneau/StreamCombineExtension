@@ -12,7 +12,7 @@ import Combine
 
 // MARK: - Peripheral : Read Characteristic publisher
 
-final class InputStreamSubscription<SubscriberType: Subscriber>: NSObject, StreamDelegate, Subscription where SubscriberType.Input == (Stream.Event,Data?), SubscriberType.Failure == Error  {
+final class InputStreamSubscription<SubscriberType: Subscriber>: NSObject, StreamDelegate, Subscription where SubscriberType.Input == (StreamEvent,Data?), SubscriberType.Failure == Error  {
     
     public var subscriber: SubscriberType?
     private let inputStream: InputStream
@@ -63,7 +63,7 @@ final class InputStreamSubscription<SubscriberType: Subscriber>: NSObject, Strea
 
         let len = inputStream.read(&buffer, maxLength: bufferSize)
         if len > 0 {
-            let _ = subscriber?.receive((.hasBytesAvailable, Data(bytes: buffer, count: len)))
+            let _ = subscriber?.receive((.dataReceived, Data(bytes: buffer, count: len)))
         }
     }
     
@@ -77,7 +77,7 @@ final class InputStreamSubscription<SubscriberType: Subscriber>: NSObject, Strea
 
 struct InputStreamPublisher : Publisher {
     
-    typealias Output = (Stream.Event,Data?)
+    typealias Output = (StreamEvent,Data?)
     typealias Failure = Error
     
     private let inputStream: InputStream
@@ -103,7 +103,7 @@ struct InputStreamPublisher : Publisher {
 // MARK: - state publisher
 extension InputStream {
     func openPublisher( in aRunLoop: RunLoop = RunLoop.current,
-                        forMode mode: RunLoop.Mode = .default , bufferSize : Int = 4096) ->  AnyPublisher<(Stream.Event,Data?),Error> {
+                        forMode mode: RunLoop.Mode = .default , bufferSize : Int = 4096) ->  AnyPublisher<(StreamEvent,Data?),Error> {
         return InputStreamPublisher(inputStream : self, in : aRunLoop,
                                     forMode : mode, bufferSize: bufferSize).eraseToAnyPublisher()
     }

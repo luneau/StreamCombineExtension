@@ -1,11 +1,15 @@
 # StreamCombineExtension
 Swift extensions for OutputStream and InputStream, using Combine instead of classic stream delegate mechanism.  
 
+## I wrote this code extension to fit my simple needs : Have straight forward read/write stream using combine.
+
+## It helped me to better appreciate Combine API
+
 # Installation
 
 ## CocoaPods
 [CocoaPods](http://cocoapods.org) is a dependency manager for CocoaProjects.
-To integrate RxBluetoothKit into your Xcode project using CocoaPods specify it in your `Podfile`:
+To integrate StreamCombineExtension into your Xcode project using CocoaPods specify it in your `Podfile`:
 ```ruby
 pod 'StreamCombineExtension', :git => 'https://github.com/luneau/StreamCombineExtension.git'
 ```
@@ -23,17 +27,65 @@ Then, run `carthage update` to build framework and drag `StreamCombineExtension.
 
 ## Swift Package Manager
 
-Versions >= 5.3 of the library integrate with the Swift Package Manager. In order to do that please specify our project as one of your dependencies in `Package.swift` file.
+Versions >= 5.3 of the library integrate with the Swift Package Manager.
 
 ## Files ...
-there is only 2 important files, so it's quite easy to integrate without a package manager
+there is only 3 important files, so it's quite easy to integrate without a package manager
 InputStreamCombineExt.swift
 OutStreamCombineExt.swift
+StreamEventCombineExt.swift
 
 # Getting Started
-```swift
 
+basic imputStream handling
+
+```swift
+let cancellableIn : AnyCancellable = inputStream.openPublisher().sink(
+    receiveCompletion: {
+        print ($0) }
+    , receiveValue: { [self] event,dataReceived in
+        switch event {
+        case .openCompleted:
+           ... do something
+        case .dataReceived:
+            guard let dataReceived = dataReceived else { return }
+            ... do something with data
+        default:
+            break
+        }
+        
+    })
+    ...
+    cancellableIn.cancel() // cleanUp and close the Stream
 ```
+
+basic output source handling handling
+
+```swift
+fileprivate func writeData(queue : PassthroughSubject<Data,Never>) {
+    queue.send(testString.data(using: .utf8)!)
+    queue.send(stopString.data(using: .utf8)!)
+    
+}
+
+fileprivate func openOutput(outputStream : OutputStream, dataQueue : PassthroughSubject<Data,Never>) -> AnyCancellable {
+    return outputStream.openPublisher(dataPublisher: dataQueue.eraseToAnyPublisher()).sink(
+        receiveCompletion: {
+            print ($0) }
+        , receiveValue: { [weak self] event,dataSent in
+            switch event {
+            case .openCompleted:
+                self?.writeData(queue: dataQueue)
+            default:
+                break
+            }
+            
+        })
+}
+```
+###  Beware ! the StreamEvent handling are dispatched on the current Runtime of the caller you may want to change it by passing the desired Runtime
+###  this implementation of OutputStream uses a PassthroughSubject to write out datas, internally it will buffered it, you may want to changed the size of the buffer depending on your use case
+
 # Requirements
 
 - iOS 13.0+
