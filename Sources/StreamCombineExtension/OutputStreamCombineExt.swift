@@ -131,7 +131,7 @@ struct OutputStreamPublisher : Publisher {
 
 // MARK: - open stream the publisher provide lifecycle informations
 extension OutputStream {
-    func openPublisher(dataPublisher : AnyPublisher<Data,Never> , in aRunLoop: RunLoop = RunLoop.current,
+ public   func openPublisher(dataPublisher : AnyPublisher<Data,Never> , in aRunLoop: RunLoop = RunLoop.current,
                        forMode mode: RunLoop.Mode = .default) -> AnyPublisher< (StreamEvent, Int),Error> {
         return OutputStreamPublisher(outputStream : self , dataPublisher : dataPublisher , in : aRunLoop,
                                      forMode : mode).eraseToAnyPublisher()

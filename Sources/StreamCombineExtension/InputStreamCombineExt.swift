@@ -102,7 +102,7 @@ struct InputStreamPublisher : Publisher {
 
 // MARK: - state publisher
 extension InputStream {
-    func openPublisher( in aRunLoop: RunLoop = RunLoop.current,
+ public   func openPublisher( in aRunLoop: RunLoop = RunLoop.current,
                         forMode mode: RunLoop.Mode = .default , bufferSize : Int = 4096) ->  AnyPublisher<(StreamEvent,Data?),Error> {
         return InputStreamPublisher(inputStream : self, in : aRunLoop,
                                     forMode : mode, bufferSize: bufferSize).eraseToAnyPublisher()

@@ -8,7 +8,7 @@
 
 
 import Foundation
-enum  StreamEvent {
+public enum  StreamEvent {
     case openCompleted
     case endEncountered
     case dataSent
