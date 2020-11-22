@@ -98,3 +98,7 @@ Beware ! the StreamEvent handling are dispatched on the current Runtime of the c
  
  ## Swift versions
  Swift 5.2
+
+# Future Plan
+- [ ] add support for OpenCombine and/or XCombine for pre iOS 13 platforms
+- [ ] add support for linux/android/others
