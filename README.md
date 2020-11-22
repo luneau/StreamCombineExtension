@@ -1,3 +1,4 @@
+
 # StreamCombineExtension
 Swift extensions for OutputStream and InputStream, using Combine instead of classic stream delegate mechanism.  
 
@@ -83,8 +84,9 @@ fileprivate func openOutput(outputStream : OutputStream, dataQueue : Passthrough
         })
 }
 ```
-  Beware ! the StreamEvent handling are dispatched on the current Runtime of the caller you may want to change it by passing the desired Runtime
-  this implementation of OutputStream uses a PassthroughSubject to write out datas, internally it will buffered it, you may want to changed the size of the buffer depending on your use case
+Beware ! the StreamEvent handling are dispatched on the current Runtime of the caller you may want to change it by passing the desired Runtime.
+  
+  This implementation of OutputStream uses a PassthroughSubject to write out datas, internally it will buffered it, you may want to changed the size of the buffer depending on your use case.
 
 # Requirements
 
