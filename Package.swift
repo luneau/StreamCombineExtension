@@ -25,6 +25,12 @@ let package = Package(
             name: "StreamCombineExtension",
             dependencies: [],
             path: ".",
+            exclude: [
+                "Tests",
+                "LICENSE",
+                "StreamCombineExtension.podspec",
+                "README.md"
+            ],
             sources: [
                                 "Sources/StreamCombineExtension"
                             ]),
