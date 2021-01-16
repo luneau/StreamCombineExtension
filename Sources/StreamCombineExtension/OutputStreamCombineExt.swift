@@ -19,19 +19,17 @@ final class OutputStreamSubscription<SubscriberType: Subscriber>: NSObject, Stre
     private let outputStream: OutputStream
     private let runloop : RunLoop
     private let mode: RunLoop.Mode
-    private var dataPublisher : AnyPublisher<Data,Never>? = nil
     private var dataBuffer : Publishers.Buffer<AnyPublisher<Data, Never>>? = nil
     private var data : Data? = nil
     private var offset = 0
     
-    init(subscriber: SubscriberType, outputStream: OutputStream, dataPublisher : AnyPublisher<Data,Never>, in aRunLoop: RunLoop,
-         forMode mode: RunLoop.Mode) {
+    init(subscriber: SubscriberType, outputStream: OutputStream, dataBuffer : Publishers.Buffer<AnyPublisher<Data, Never>>, in aRunLoop: RunLoop,
+         forMode mode: RunLoop.Mode, bufferSize : Int) {
         self.subscriber = subscriber
         self.outputStream = outputStream
-        self.dataPublisher = dataPublisher
         self.runloop = aRunLoop
         self.mode = mode
-        self.dataBuffer = dataPublisher.buffer(size: 1024, prefetch: .byRequest, whenFull: .dropNewest)
+        self.dataBuffer = dataBuffer
     }
     
     func request(_ demand: Subscribers.Demand) {
@@ -50,7 +48,6 @@ final class OutputStreamSubscription<SubscriberType: Subscriber>: NSObject, Stre
             subscriber?.receive(completion: .finished)
         case .errorOccurred:
             subscriber?.receive(completion: .failure(aStream.streamError!))
-        case .hasBytesAvailable: break
         case .hasSpaceAvailable:
             sendData()
         default:
@@ -66,7 +63,7 @@ final class OutputStreamSubscription<SubscriberType: Subscriber>: NSObject, Stre
                 let bufferPointer = rawBufferPointer.bindMemory(to: UInt8.self)
                 return outputStream.write(bufferPointer.baseAddress! + offset , maxLength: data.count - offset)
             }
-           
+            
             offset += bytesWritten
             let _ = subscriber?.receive( (.dataSent, bytesWritten))
             return
@@ -79,7 +76,6 @@ final class OutputStreamSubscription<SubscriberType: Subscriber>: NSObject, Stre
         outputStream.close()
         outputStream.remove(from: runloop, forMode: mode)
         dataBuffer = nil
-        dataPublisher = nil
         subscriber = nil
         outputStream.delegate = nil
     }
@@ -104,36 +100,55 @@ final class OutputStreamSubscription<SubscriberType: Subscriber>: NSObject, Stre
     }
 }
 
-struct OutputStreamPublisher : Publisher {
+public final class OutputStreamPublisher : Publisher {
     
-    typealias Output =  (StreamEvent, Int)
-    typealias Failure = Error
+    public typealias Output =  (StreamEvent, Int)
+    public typealias Failure = Error
     
     private let outputStream: OutputStream
     private let runloop : RunLoop
     private let mode: RunLoop.Mode
     private let dataPublisher : AnyPublisher<Data,Never>
+    private let dataSubject : PassthroughSubject<Data,Never>?
+    private let bufferSize : Int
     
-    init(outputStream: OutputStream , dataPublisher : AnyPublisher<Data,Never>, in aRunLoop: RunLoop,
-         forMode mode: RunLoop.Mode) {
+    init<S>(outputStream: OutputStream , dataPublisher : S, in aRunLoop: RunLoop,
+            forMode mode: RunLoop.Mode, bufferSize : Int) where S: Publisher , S.Output == Data, S.Failure == Never {
         self.outputStream = outputStream
-        self.dataPublisher = dataPublisher
+        self.dataPublisher = dataPublisher.eraseToAnyPublisher()
         self.runloop = aRunLoop
         self.mode = mode
+        self.bufferSize = bufferSize
+        self.dataSubject = dataPublisher as?  PassthroughSubject<Data,Never>
     }
     
-    func receive<S>(subscriber: S) where S : Subscriber, S.Failure == Self.Failure, S.Input == Self.Output {
-        let subscription = OutputStreamSubscription(subscriber: subscriber, outputStream: outputStream, dataPublisher : dataPublisher, in : runloop,
-                                                    forMode : mode)
+    public func receive<S>(subscriber: S) where S : Subscriber, S.Failure == Failure, S.Input == Output {
+        let subscription = OutputStreamSubscription(subscriber: subscriber, outputStream: outputStream, dataBuffer : dataPublisher.buffer(size: bufferSize, prefetch: .byRequest, whenFull: .dropNewest), in : runloop,
+                                                    forMode : mode, bufferSize : bufferSize)
         subscriber.receive(subscription: subscription)
+    }
+    public func subject() -> PassthroughSubject<Data,Never>? {
+        return dataSubject
+    }
+    public func queue(data : Data) {
+        dataSubject?.send(data)
     }
 }
 
+
+
 // MARK: - open stream the publisher provide lifecycle informations
 extension OutputStream {
- public   func openPublisher(dataPublisher : AnyPublisher<Data,Never> , in aRunLoop: RunLoop = RunLoop.current,
-                       forMode mode: RunLoop.Mode = .default) -> AnyPublisher< (StreamEvent, Int),Error> {
+    
+    public func openPublisher<S>(dataPublisher : S, in aRunLoop: RunLoop = RunLoop.current,
+                                 forMode mode: RunLoop.Mode = .default, bufferSize : Int = 1024) -> OutputStreamPublisher  where S: Publisher , S.Output == Data, S.Failure == Never {
         return OutputStreamPublisher(outputStream : self , dataPublisher : dataPublisher , in : aRunLoop,
-                                     forMode : mode).eraseToAnyPublisher()
+                                     forMode : mode, bufferSize : bufferSize)
+    }
+    
+    public func openPublisher(in aRunLoop: RunLoop = RunLoop.current,
+                              forMode mode: RunLoop.Mode = .default, bufferSize : Int = 1024) -> OutputStreamPublisher{
+        let subject = PassthroughSubject<Data,Never>()
+        return openPublisher(dataPublisher: subject, in: aRunLoop, forMode: mode, bufferSize: bufferSize)
     }
 }
